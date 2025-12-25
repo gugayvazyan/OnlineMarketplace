@@ -18,13 +18,18 @@ class Management {
     Warehouse kazakhstanWarehouse;
     Warehouse ukraineWarehouse;
 
-
     void bootstrap();
+
 public:
     Management();
     ~Management() = default;
 
-    User* createUser(const std::string& name, UserType type, Country country, size_t balance = 0);
+    User* createUser(const std::string& name,
+                     UserType type,
+                     Country country,
+                     size_t balance = 0,
+                     const std::string& password = "");
+
     void addProduct(std::unique_ptr<Product> product);
 
     Order* createOrder(User* user, const std::vector<Product*>& selectedProducts);
@@ -32,7 +37,6 @@ public:
 
     Warehouse* getWarehouse(Country country);
     Truck& getTruck(Warehouse& warehouse);
-
 
     const std::vector<std::unique_ptr<Product>>& getAllProducts() const;
     const std::vector<std::unique_ptr<User>>& getAllUsers() const;
@@ -44,5 +48,4 @@ public:
     void buyerMenu(User* buyer);
     void sellerMenu(User* seller);
     void adminMenu(User* admin);
-
 };

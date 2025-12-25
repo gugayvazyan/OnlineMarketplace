@@ -26,3 +26,8 @@ class InsufficientFunds : public MarketplaceExceptions {
 public:
     explicit InsufficientFunds(const std::string& msg) : MarketplaceExceptions(msg) {}
 };
+
+class WrongPassword : public MarketplaceExceptions {
+public:
+    explicit WrongPassword(const std::string& msg) : MarketplaceExceptions(msg) {}
+};

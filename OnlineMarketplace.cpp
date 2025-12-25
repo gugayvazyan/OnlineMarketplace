@@ -26,11 +26,12 @@ const char* User::toString(Country c) {
     return "Unknown";
 }
 
-User::User(size_t id_, const std::string& name, UserType type_, Country country_, size_t balance_)
-    : id(id_), username(name), type(type_), country(country_), balance(balance_) {}
+User::User(size_t id_, const std::string& name, UserType type_, Country country_, size_t balance_, const std::string& password_)
+    : id(id_), username(name), password(password_), type(type_), country(country_), balance(balance_) {}
 
 size_t User::getId() const { return id; }
 const std::string& User::getUsername() const { return username; }
+const std::string& User::getPassword() const { return password; }
 UserType User::getType() const { return type; }
 Country User::getCountry() const { return country; }
 size_t User::getBalance() const { return balance; }
@@ -58,6 +59,7 @@ void User::removeFromCart(Product* product) {
 }
 
 const std::vector<Product*>& User::getCart() const { return cart; }
+void User::clearCart() { cart.clear(); }
 
 void User::addOrder(Order* order) {
     if (!order) throw NotFound("Null order");

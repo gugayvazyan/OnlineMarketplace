@@ -27,6 +27,7 @@ struct Counter {
 class User {
     size_t id{};
     std::string username;
+    std::string password;
     UserType type{UserType::Buyer};
     Country country{Country::Armenia};
     size_t balance{0};
@@ -35,10 +36,11 @@ class User {
     std::vector<Order*> orders;
 
 public:
-    User(size_t id, const std::string& name, UserType type, Country country, size_t balance);
+    User(size_t id, const std::string& name, UserType type, Country country, size_t balance, const std::string& password);
 
     size_t getId() const;
     const std::string& getUsername() const;
+    const std::string& getPassword() const;
     UserType getType() const;
     Country getCountry() const;
     size_t getBalance() const;
@@ -49,6 +51,7 @@ public:
     void addToCart(Product* product);
     void removeFromCart(Product* product);
     const std::vector<Product*>& getCart() const;
+    void clearCart();
 
     void addOrder(Order* order);
     const std::vector<Order*>& getOrders() const;

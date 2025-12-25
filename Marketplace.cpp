@@ -20,11 +20,11 @@ void Management::bootstrap() {
     for (int i = 0; i < 2; ++i) ukraineWarehouse.garage.push_back(std::make_unique<Truck>());
 
 
-    User* sellerAM = createUser("Seller_Armenia", UserType::Seller, Country::Armenia);
-    User* sellerGE = createUser("Seller_Georgia", UserType::Seller, Country::Georgia);
-    User* sellerBY = createUser("Seller_Belarus", UserType::Seller, Country::Belarus);
-    User* sellerKZ = createUser("Seller_Kazakhstan", UserType::Seller, Country::Kazakhstan);
-    User* sellerRU = createUser("Seller_Russia", UserType::Seller, Country::Russia);
+    User* sellerAM = createUser("Seller_Armenia", UserType::Seller, Country::Armenia, 0, "1234");
+    User* sellerGE = createUser("Seller_Georgia", UserType::Seller, Country::Georgia, 0, "1234");
+    User* sellerBY = createUser("Seller_Belarus", UserType::Seller, Country::Belarus, 0, "1234");
+    User* sellerKZ = createUser("Seller_Kazakhstan", UserType::Seller, Country::Kazakhstan, 0, "1234");
+    User* sellerRU = createUser("Seller_Russia", UserType::Seller, Country::Russia, 0, "1234");
 
     Warehouse* whAM = getWarehouse(Country::Armenia);
     Warehouse* whGE = getWarehouse(Country::Georgia);
@@ -53,9 +53,9 @@ void Management::bootstrap() {
     }
 }
 
-User* Management::createUser(const std::string& name, UserType type, Country country, size_t balance) {
+User* Management::createUser(const std::string& name, UserType type, Country country, size_t balance, const std::string& password) {
     const size_t id = Counter::UserId++;
-    users.push_back(std::make_unique<User>(id, name, type, country, balance));
+    users.push_back(std::make_unique<User>(id, name, type, country, balance, password));
     return users.back().get();
 }
 
@@ -68,14 +68,9 @@ Order* Management::createOrder(User* user, const std::vector<Product*>& selected
     if (!user) throw NotFound("User is null");
     if (selectedProducts.empty()) throw NotFound("No products selected");
 
-    size_t total = 0;
     for (size_t i = 0; i < selectedProducts.size(); ++i) {
         if (!selectedProducts[i]) throw NotFound("Null product in selection");
-        total += selectedProducts[i]->getPrice();
     }
-
-    if (!user->canPay(total)) throw InsufficientFunds("Not enough money");
-    user->pay(total);
 
     orders.push_back(std::make_unique<Order>(user, selectedProducts));
     Order* ord = orders.back().get();
@@ -140,6 +135,7 @@ User* Management::pickUser(UserType type) {
             std::string name;
             int c;
             size_t bal = 0;
+            std::string pass;
 
             std::cout << "Name: ";
             std::cin >> name;
@@ -160,7 +156,10 @@ User* Management::pickUser(UserType type) {
                 std::cin >> bal;
             }
 
-            User* u = createUser(name, type, country, bal);
+            std::cout << "Password: ";
+            std::cin >> pass;
+
+            User* u = createUser(name, type, country, bal, pass);
 
             std::cout << "Created: id=" << u->getId()
                       << " name=" << u->getUsername()
@@ -172,25 +171,42 @@ User* Management::pickUser(UserType type) {
         }
 
         if (cmd == 2) {
-            size_t id;
-            std::cout << "Enter id: ";
-            std::cin >> id;
+    size_t id;
+    std::cout << "Enter id: ";
+    std::cin >> id;
 
-            const auto& us = getAllUsers();
-            for (size_t i = 0; i < us.size(); ++i) {
-                if (!us[i]) continue;
-                if (us[i]->getId() == id && us[i]->getType() == type) {
-                    User* u = us[i].get();
+    const auto& us = getAllUsers();
+    for (size_t i = 0; i < us.size(); ++i) {
+        if (!us[i]) continue;
+        if (us[i]->getId() == id && us[i]->getType() == type) {
+            User* u = us[i].get();
+
+            for (int attempt = 1; attempt <= 3; ++attempt) {
+                std::string passwd;
+                std::cout << "Enter password (" << attempt << "/3): ";
+                std::cin >> passwd;
+
+                if (passwd == u->getPassword()) {
                     std::cout << "Selected: id=" << u->getId()
                               << " name=" << u->getUsername()
                               << " country=" << User::toString(u->getCountry())
                               << " balance=" << u->getBalance() << std::endl;
                     return u;
                 }
+
+                if (attempt < 3) {
+                    std::cout << "Wrong password. Try again.\n";
+                }
             }
 
-            std::cout << "Not found" << std::endl;
+            std::cout << "Wrong password 3 times. Back to main menu.\n";
+            return nullptr;
         }
+    }
+
+    std::cout << "Not found" << std::endl;
+}
+
 
         if (cmd == 3) {
             const auto& us = getAllUsers();
@@ -202,23 +218,22 @@ User* Management::pickUser(UserType type) {
                 if (us[i]->getType() != type) continue;
 
                 any = true;
-                std::cout << "Id= " << us[i]->getId()
-                          << " Name= " << us[i]->getUsername()
-                          << " Country="  << User::toString(us[i]->getCountry());
+                std::cout << "id=" << us[i]->getId()
+                          << " name=" << us[i]->getUsername()
+                          << " country=" << User::toString(us[i]->getCountry());
 
                 if (type == UserType::Buyer) {
-                    std::cout << " balance= " << us[i]->getBalance();
+                    std::cout << " balance=" << us[i]->getBalance();
                 }
                 std::cout << "\n";
             }
 
             if (!any) {
-                std::cout << "No users of this type yet." << std::endl;
+                std::cout << "No users of this type yet.\n";
             }
         }
     }
 }
-
 
 void Management::runUser(User* u) {
     if (!u) return;
@@ -330,40 +345,39 @@ void Management::buyerMenu(User* buyer) {
                 std::cout << "Removed" << std::endl;
             }
             else if (cmd == 5) {
-                const auto& cart = buyer->getCart();
-                if (cart.empty()) throw NotFound("Cart empty");
+    const auto& cart = buyer->getCart();
+    if (cart.empty()) throw NotFound("Cart empty");
 
-                std::vector<Product*> selected;
-                for (size_t i = 0; i < cart.size(); ++i) {
-                    if (cart[i]) selected.push_back(cart[i]);
-                }
+    std::vector<Product*> selected;
+    for (size_t i = 0; i < cart.size(); ++i) {
+        if (cart[i]) selected.push_back(cart[i]);
+    }
 
-                size_t total = 0;
-                for (size_t i = 0; i < selected.size(); ++i) {
-                    total += selected[i]->getPrice();
-                }
+    // Pay in checkout
+    size_t total = 0;
+    for (size_t i = 0; i < selected.size(); ++i) {
+        total += selected[i]->getPrice();
+    }
+    if (!buyer->canPay(total)) throw InsufficientFunds("Not enough money");
+    buyer->pay(total);
 
-                if (!buyer->canPay(total)) throw InsufficientFunds("Not enough money");
-                buyer->pay(total);
+    Order* ord = createOrder(buyer, selected);
 
-                Order* ord = createOrder(buyer, selected);
+    // Clear cart after successful purchase
+    buyer->clearCart();
 
-                for (size_t i = 0; i < selected.size(); ++i) {
-                    buyer->removeFromCart(selected[i]);
-                }
+    Delivery* del = createDelivery(ord);
 
-                Delivery* del = createDelivery(ord);
+    std::cout << "Order created: id=" << ord->getId()
+              << " total=" << ord->getTotalCost()
+              << " balance=" << buyer->getBalance() << "\n";
 
-                std::cout << "Order created: id=" << ord->getId()
-                        << " total=" << ord->getTotalCost()
-                        << " balance=" << buyer->getBalance() << "\n";
-
-                if (del && del->getTruck()) {
-                    std::cout << "Delivery: truck=" << del->getTruck()->truckId
-                            << " days=" << del->getDays() << std::endl;
-                }
-            }
-            else if (cmd == 6) {
+    if (del && del->getTruck()) {
+        std::cout << "Delivery: truck=" << del->getTruck()->truckId
+                  << " days=" << del->getDays() << std::endl;
+    }
+}
+else if (cmd == 6) {
                 const auto& os = buyer->getOrders();
                 if (os.empty()) {
                     std::cout << "(no orders)" << std::endl;
